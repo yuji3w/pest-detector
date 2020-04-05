@@ -1,2 +1,5 @@
 *.pyc
 images/
+*.jpeg
+*.jpg
+*.png

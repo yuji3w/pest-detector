@@ -6,17 +6,13 @@ import numpy as np
     Y, CHANNEL. '''
 def partition_image(img, block_dims = (4,4)):
   if (len(img.shape) == 2):
-    return partition_gray(img, block_dims)
+    yield from partition_gray(img, block_dims)
+    return
   x_len, y_len, channels = img.shape
   x_block, y_block = block_dims
-  blocks = []
   for x in range(0, x_len - x_len % x_block, x_block):
-    blocks.append([])
     for y in range(0, y_len - y_len % y_block, y_block):
-      blocks[x // x_block].append(
-        img[x : x + x_block, y : y + y_block, :])
-  # todo: integrate np for speedup
-  return blocks
+      yield img[x : x + x_block, y : y + y_block, :]
 
 ''' Returns cv2 grayscale IMG broken into BLOCK_DIMS[0]x
     BLOCK_DIMS[1] sub-rectangles as 4-dimensional array 
@@ -24,14 +20,9 @@ def partition_image(img, block_dims = (4,4)):
 def partition_gray(img, block_dims = (4,4)):
   x_len, y_len = img.shape
   x_block, y_block = block_dims
-  blocks = []
   for x in range(0, x_len - x_len % x_block, x_block):
-    blocks.append([])
     for y in range(0, y_len - y_len % y_block, y_block):
-      blocks[x // x_block].append(
-        img[x : x + x_block, y : y + y_block])
-  # todo: integrate np for speedup
-  return blocks
+      yield img[x : x + x_block, y : y + y_block]
 
 ''' Yields 4^depth color sub-IMG, in up-down, 
     left-right order.'''
@@ -74,3 +65,46 @@ def image_quarter(img, number):
 def yield_until(iter, limit):
   for i in range(limit):
     yield next(iter)
+
+''' Returns laplacian float representing blurriness '''
+def calculate_sharp(frame):
+   return cv2.Laplacian(frame, cv2.CV_64F).var()
+
+''' Returns the maximum image specified by KEY '''
+def max_images(images, key = calculate_sharp):
+  values = list(map(calculate_sharp, images))
+  index_max = max(range(len(values)), key=values.__getitem__)
+  return images[index_max]
+  # best_image, best_val = images[0], calculate_sharp(best_image)
+  # for i in range(1, len(images)):
+  #   curr_val = calculate_sharp(images[i])
+  #   if curr_val > best_val:
+
+''' Selects the max of iterators of images, producing final image of size
+    FINAL_DIMS[0]xFINAL_DIMS[1]. '''
+def reconstruct_max(list_iterators, final_dims, key = calculate_sharp):
+  list_sub_images = [next(image_gen) for image_gen in list_iterators]
+  prev_images = max_images(list_sub_images, key = calculate_sharp)
+  for y in range(1 ,final_dims[1], 1):
+    list_sub_images = [next(image_gen) for image_gen in list_iterators]
+    best_image = max_images(list_sub_images, key = calculate_sharp)
+    prev_images = np.concatenate((prev_images, best_image), axis = 1)
+  prev_row = prev_images
+  for x in range(1, final_dims[0], 1):
+    list_sub_images = [next(image_gen) for image_gen in list_iterators]
+    prev_images = max_images(list_sub_images, key = calculate_sharp)
+    for y in range(1 ,final_dims[1], 1):
+      list_sub_images = [next(image_gen) for image_gen in list_iterators]
+      best_image = max_images(list_sub_images, key = calculate_sharp)
+      prev_images = np.concatenate((prev_images, best_image), axis = 1)
+    prev_row = np.concatenate((prev_row, prev_images), axis = 0)
+  return prev_row
+
+''' Returns an image from a combined iterable IMAGES, subdivided into 
+    IMAGES.SHAPE[0]//4 x IMAGES.SHAPE[1]//4 '''
+def max_pool_subdivided_images(images, subdiv_dims = (4, 4)):
+  subdiv_x, subdiv_y = subdiv_dims
+  subimage_generators = [partition_image(image, (image.shape[0] // subdiv_x, 
+    image.shape[1] // subdiv_y)) for image in images]
+  best_image = reconstruct_max(subimage_generators, (subdiv_x, subdiv_y))
+  return best_image
