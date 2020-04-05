@@ -13,6 +13,24 @@ def display_image(image, window_name = 'image'):
 	cv2.destroyAllWindows()
 
 if __name__ == '__main__':
+	image_iterator = generate_images('images', 'jpeg')
+	only_image = next(image_iterator)
+	filtered_image = frame_hue_bounded(only_image)
+	cv2.imwrite('filtered.jpg', filtered_image)
+	filtered_black_image = frame_hue_bounded(only_image,
+		np.array([0, 5, 50]), np.array([179, 50, 255]))
+	contoured = draw_contours(filtered_black_image)
+	cv2.imwrite('contoured.jpg', contoured)
+
+if __name__ == '__main__':
 	image_iterator = generate_images('images', 'jpg')
-	best_image = max_pool_subdivided_images(image_iterator, (13, 13))
-	cv2.imwrite('final.jpg', best_image)
+	only_image = next(image_iterator)
+	filtered_image = frame_hue_bounded(only_image)
+	cv2.imwrite('filtered.jpg', filtered_image)
+	corners = detect_corners(filtered_image)
+	roi = transform_frame(only_image, corners)
+	cv2.imwrite('only_flypaper.jpg', roi)
+	roi_detected_black = frame_hue_bounded(roi,
+		np.array([0, 5, 50]), np.array([179, 50, 255]))
+	cv2.imwrite('black_roi.jpg', roi_detected_black)
+	blurred_roi = kernel_blur(roi)

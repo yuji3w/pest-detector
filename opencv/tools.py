@@ -108,3 +108,61 @@ def max_pool_subdivided_images(images, subdiv_dims = (4, 4)):
     image.shape[1] // subdiv_y)) for image in images]
   best_image = reconstruct_max(subimage_generators, (subdiv_x, subdiv_y))
   return best_image
+
+''' Convert FRAME into pure black/white where black is outside color bounds
+    and white is inside color bounds'''
+def frame_hue_bounded(frame, lower_bound = np.array([20, 100, 100]), 
+  upper_bound = np.array([30, 255, 255])):
+  hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+  return cv2.inRange(hsv, lower_bound, upper_bound)
+
+def draw_contours(image):
+  ret, thresh = cv2.threshold(image, 127, 255, 0)
+  contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+  image = cv2.drawContours(image, contours, -1, (10,255,255), 3)
+  return image
+
+''' Return corner vertices of rectangle in FRAME where FRAME 
+    is image of pure black/white. Returns an array of corners in the order
+    of [Vicky fill this in]'''
+def detect_corners(frame):
+  grayimg = cv2.cvtColor(frame, cv2.COLOR_B2R2GRAY)
+  corners = cv2.goodFeaturesToTrack(grayimg, 4, 0.01, 50)
+  arr = np.zeros((4,2))
+  for i in corners:
+    np.append(arr, i)
+    
+  pass
+
+''' Returns bounded frame with specified corners within FRAME '''
+def transform_frame(frame, corners):
+  # Affine Transformation:
+  # https://docs.opencv.org/master/dd/d52/tutorial_js_geometric_transformations.html
+  #
+  # matFromArray:
+  # https://docs.opencv.org/master/de/d06/tutorial_js_basic_ops.html
+  
+  source = frame
+  dst = new cv.Mat()
+  # src_mat = cv.matFromArray(2, 2, cv.CV_32FC1)
+  dst_mat = cv.matFromArray(2, 2, cv.CV_32FC1, detect_corners(source))
+  d_size = new cv.Size(src_mat, dst_mat)
+  M = cv.getAffineTransformation(src_mat, dst_mat)
+  
+  # A perspective transformation may be better since we know the output deminsions
+  return M
+
+''' Blurs the FRAME using KERNEL '''
+def kernel_blur(frame, kernel = (5,5)):
+  #https://www.tutorialkart.com/opencv/python/opencv-python-gaussian-image-smoothing/
+  dst = None
+  if (isInstance(kernel, tuple)):
+    dst = cv2.GaussianBlur(frame, kernel, cv2.BORDER_DEFAULT)
+  else:
+    dst = cv2.GaussianBlur(frame, (len(kernel), len(kernel[0])), cv2.BORDER_DEFAULT)
+  #for testing
+  cv2.imshow("Gaussian Smoothing", np.hstack((frame, dst)))
+  return dst
+
+
+
