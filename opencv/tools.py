@@ -126,13 +126,9 @@ def draw_contours(image):
     is image of pure black/white. Returns an array of corners in the order
     of [Vicky fill this in]'''
 def detect_corners(frame):
-  grayimg = cv2.cvtColor(frame, cv2.COLOR_B2R2GRAY)
-  corners = cv2.goodFeaturesToTrack(grayimg, 4, 0.01, 50)
-  arr = np.zeros((4,2))
-  for i in corners:
-    np.append(arr, i)
-    
-  pass
+  grey = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+  corners = cv2.goodFeaturesToTrack(grey, 4, 0.01, 50)
+  return corners
 
 ''' Returns bounded frame with specified corners within FRAME '''
 def transform_frame(frame, corners):
